@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tangkap Energi dari Dudu! 💖</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: linear-gradient(to bottom, #ffecd2 0%, #fcb69f 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Mencegah layar ter-scroll saat main */
+            touch-action: none; /* Penting untuk kontrol sentuh di HP */
+        }
+
+        #ui-bar {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #d63031;
+        }
+
+        #game-area {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #player {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            z-index: 50;
+            user-select: none;
+            /* Tambahkan transisi biar lebih mulus */
+            transition: left 0.1s ease-out; 
+        }
+
+        .item {
+            position: absolute;
+            font-size: 2.5rem;
+            user-select: none;
+            z-index: 40;
+        }
+
+        /* Tampilan Layar Mulai & Selesai */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        h1, h2 {
+            color: #d63031;
+            margin-top: 0;
+        }
+
+        p {
+            color: #555;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+
+        button {
+            background: #ff7675;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(255, 118, 117, 0.4);
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            background: #d63031;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-bar">
+        <div>Waktu: <span id="waktu">30</span>s</div>
+        <div>Skor: <span id="skor">0</span></div>
+    </div>
+
+    <div id="game-area">
+        <div id="player">🧺</div>
+    </div>
+
+    <div id="layar-mulai" class="overlay">
+        <div class="modal">
+            <h1>Halo Sayang! 🥰</h1>
+            <p>Haniif tahu kamu lagi capek banget. Sini main bentar buat *refreshing* otak!</p>
+            <p><strong>Cara Main:</strong> Geser keranjangnya 🧺 (pakai mouse/jari) buat nangkep makanan & cinta 💖🍔. Hindari tumpukan kerjaan 🗂️ ya biar nggak makin pusing!</p>
+            <button id="btn-mulai">Mulai Main!</button>
+        </div>
+    </div>
+
+    <div id="layar-selesai" class="overlay" style="display: none;">
+        <div class="modal">
+            <h2>Waktu Habis! ⏰</h2>
+            <p>Skor Energi Kamu: <strong id="skor-akhir" style="font-size: 1.5rem; color:#d63031;">0</strong></p>
+            <p id="pesan-akhir"></p>
+            <button id="btn-ulang">Main Lagi Dong</button>
+        </div>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('game-area');
+        const player = document.getElementById('player');
+        const skorEl = document.getElementById('skor');
+        const waktuEl = document.getElementById('waktu');
+        const layarMulai = document.getElementById('layar-mulai');
+        const layarSelesai = document.getElementById('layar-selesai');
+        const pesanAkhir = document.getElementById('pesan-akhir');
+        
+        let skor = 0;
+        let waktu = 30;
+        let isPlaying = false;
+        let gameInterval;
+        let itemSpawner;
+
+        // Daftar Item (Bagus = Poin +, Jelek = Poin -)
+        const itemBagus = ['💖', '🥰', '🍗', '🧋', '🍟', '🌹', '💵'];
+        const itemJelek = ['🗂️', '📉', '😫'];
+
+        // --- KONTROL PEMAIN (HP & LAPTOP) --- //
+        // Untuk Layar Sentuh (HP)
+        gameArea.addEventListener('touchmove', (e) => {
+            if (!isPlaying) return;
+            let touchX = e.touches[0].clientX;
+            posisikanPlayer(touchX);
+        });
+
+        // Untuk Mouse (Laptop)
+        gameArea.addEventListener('mousemove', (e) => {
+            if (!isPlaying) return;
+            posisikanPlayer(e.clientX);
+        });
+
+        function posisikanPlayer(x) {
+            const playerWidth = player.offsetWidth;
+            const screenWidth = window.innerWidth;
+            // Batasi agar tidak keluar layar
+            if (x < playerWidth / 2) x = playerWidth / 2;
+            if (x > screenWidth - playerWidth / 2) x = screenWidth - playerWidth / 2;
+            player.style.left = x + 'px';
+        }
+
+        // --- LOGIKA GAME --- //
+        document.getElementById('btn-mulai').addEventListener('click', mulaiGame);
+        document.getElementById('btn-ulang').addEventListener('click', mulaiGame);
+
+        function mulaiGame() {
+            layarMulai.style.display = 'none';
+            layarSelesai.style.display = 'none';
+            
+            // Reset Variabel
+            skor = 0;
+            waktu = 30;
+            skorEl.innerText = skor;
+            waktuEl.innerText = waktu;
+            isPlaying = true;
+
+            // Hapus item lama kalau ada
+            document.querySelectorAll('.item').forEach(el => el.remove());
+
+            // Mulai Timer & Spawner
+            gameInterval = setInterval(updateTimer, 1000);
+            itemSpawner = setInterval(buatItem, 600); // Tiap 0.6 detik muncul item baru
+            animasiJatuh(); // Mulai loop pergerakan item
+        }
+
+        function buatItem() {
+            if (!isPlaying) return;
+
+            const div = document.createElement('div');
+            div.classList.add('item');
+            
+            // Tentukan peluang: 70% item bagus, 30% item jelek
+            const isBagus = Math.random() > 0.3;
+            const daftar = isBagus ? itemBagus : itemJelek;
+            const item = daftar[Math.floor(Math.random() * daftar.length)];
+            
+            div.innerText = item;
+            div.dataset.type = isBagus ? 'bagus' : 'jelek';
+            
+            // Posisi acak di bagian atas layar
+            const startX = Math.random() * (window.innerWidth - 40);
+            div.style.left = startX + 'px';
+            div.style.top = '-50px'; // Mulai dari luar layar atas
+            
+            gameArea.appendChild(div);
+        }
+
+        function animasiJatuh() {
+            if (!isPlaying) return;
+
+            const items = document.querySelectorAll('.item');
+            const playerRect = player.getBoundingClientRect();
+
+            items.forEach(item => {
+                let top = parseFloat(item.style.top);
+                // Kecepatan jatuh (bisa ditambah biar lebih susah)
+                top += 5; 
+                item.style.top = top + 'px';
+
+                // Cek tabrakan dengan player (keranjang)
+                const itemRect = item.getBoundingClientRect();
+                
+                if (
+                    itemRect.bottom >= playerRect.top + 20 && // +20 biar masuk ke keranjang
+                    itemRect.top <= playerRect.bottom &&
+                    itemRect.right >= playerRect.left &&
+                    itemRect.left <= playerRect.right
+                ) {
+                    // Item tertangkap!
+                    if (item.dataset.type === 'bagus') {
+                        skor += 10;
+                    } else {
+                        skor -= 5; // Kurangi poin kalau nangkep kerjaan
+                        player.style.transform = 'translateX(-50%) scale(0.8)'; // Efek kena hit
+                        setTimeout(() => player.style.transform = 'translateX(-50%) scale(1)', 200);
+                    }
+                    skorEl.innerText = skor;
+                    item.remove();
+                } 
+                // Hapus item kalau sudah lewat batas bawah layar
+                else if (top > window.innerHeight) {
+                    item.remove();
+                }
+            });
+
+            // Loop animasi
+            requestAnimationFrame(animasiJatuh);
+        }
+
+        function updateTimer() {
+            waktu--;
+            waktuEl.innerText = waktu;
+            
+            if (waktu <= 0) {
+                selesaiGame();
+            }
+        }
+
+        function selesaiGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearInterval(itemSpawner);
+
+            document.getElementById('skor-akhir').innerText = skor;
+            
+            // Pesan dinamis berdasarkan skor
+            if (skor > 200) {
+                pesanAkhir.innerHTML = "Wih, energi positifnya full banget! 🚀<br>Rizki keren deh! Semoga capeknya hari ini luntur semua ya sayang. Istirahat gih! 🥰";
+            } else if (skor > 0) {
+                pesanAkhir.innerHTML = "Lumayan dapet tambahan energi! 🍟<br>Besok kita isi full lagi ya. Gapapa capek, kamu udah ngelakuin yang terbaik hari ini. Proud of you! 💖";
+            } else {
+                pesanAkhir.innerHTML = "Aduh, banyakan nangkap pusingnya ya? 😫<br>Sini Haniif peluk virtual! Udahan dulu mikirin bebannya, sekarang waktunya kamu rebahan santai. 😘";
+            }
+
+            layarSelesai.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
