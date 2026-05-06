@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Spesial Buat Rizki 💖</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            overflow: hidden; /* Supaya layarnya tidak bisa di-scroll */
+            position: relative;
+        }
+        
+        .header {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: absolute;
+            top: 0;
+            width: 100%;
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0;
+            color: #4a90e2;
+            font-size: 1.5rem;
+        }
+
+        #skor-teks {
+            font-size: 1.2rem;
+            color: #333;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Ikon hati yang bisa diklik */
+        #hati {
+            position: absolute;
+            font-size: 3rem;
+            cursor: pointer;
+            user-select: none;
+            /* Posisi awal di tengah */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: top 0.3s, left 0.3s; /* Efek transisi saat berpindah */
+        }
+
+        /* Animasi detak jantung */
+        @keyframes denyut {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .denyut-animasi {
+            animation: denyut 0.8s infinite;
+        }
+
+        /* Kotak pesan saat menang */
+        #pesan-menang {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 20;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        #pesan-menang h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+
+        #pesan-menang p {
+            color: #555;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Tangkap Hati Haniif! 🏃‍♂️💨</h1>
+        <div id="skor-teks">Hati yang tertangkap: <span id="skor">0</span> / 10</div>
+    </div>
+
+    <!-- Ikon hati target -->
+    <div id="hati" class="denyut-animasi">💖</div>
+
+    <!-- Pesan yang muncul setelah menang -->
+    <div id="pesan-menang">
+        <h2>Yeay, Berhasil! 🎉</h2>
+        <p>Hebat banget sih Rizki Dwi Yuliarti! Tuh kan, nangkep hati yang lari-lari aja kamu jago, apalagi ngelewatin capeknya hari ini.</p>
+        <p>Semangat terus ya sayang! Istirahat yang cukup biar besok fresh lagi. 🥰</p>
+    </div>
+
+    <script>
+        let skor = 0;
+        const targetSkor = 10;
+        const elemenHati = document.getElementById('hati');
+        const elemenSkor = document.getElementById('skor');
+        const elemenPesan = document.getElementById('pesan-menang');
+
+        // Fungsi saat hati diklik
+        elemenHati.addEventListener('click', function() {
+            skor++;
+            elemenSkor.innerText = skor;
+
+            // Cek apakah sudah menang
+            if (skor >= targetSkor) {
+                // Sembunyikan hati dan tampilkan pesan
+                elemenHati.style.display = 'none';
+                elemenPesan.style.display = 'block';
+                
+                // Hujan konfeti sederhana pakai emoji
+                buatKonfeti();
+            } else {
+                // Pindah posisi hati ke tempat acak
+                pindahPosisi();
+            }
+        });
+
+        function pindahPosisi() {
+            // Hitung lebar dan tinggi layar yang aman (dikurangi ukuran hati dan header)
+            const maxX = window.innerWidth - 80; 
+            const maxY = window.innerHeight - 150;
+
+            // Pastikan posisi tidak terlalu ke atas (menabrak header)
+            const randomX = Math.max(20, Math.random() * maxX);
+            const randomY = Math.max(100, Math.random() * maxY);
+
+            // Terapkan posisi baru tanpa menghilangkan transform dari class CSS
+            elemenHati.style.left = randomX + 'px';
+            elemenHati.style.top = randomY + 'px';
+            elemenHati.style.transform = 'translate(0, 0)'; // Reset transform saat pindah acak
+            
+            // Hapus dan pasang lagi class animasi supaya detaknya reset
+            elemenHati.classList.remove('denyut-animasi');
+            void elemenHati.offsetWidth; // Trigger reflow
+            elemenHati.classList.add('denyut-animasi');
+        }
+
+        function buatKonfeti() {
+            const emojis = ['🎉', '✨', '💖', '🥰'];
+            for (let i = 0; i < 30; i++) {
+                const konfeti = document.createElement('div');
+                konfeti.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                konfeti.style.position = 'absolute';
+                konfeti.style.fontSize = '2rem';
+                konfeti.style.left = Math.random() * 100 + 'vw';
+                konfeti.style.top = '-50px';
+                konfeti.style.zIndex = '5';
+                
+                // Animasi jatuh
+                konfeti.style.transition = 'top 3s linear, left 3s ease-in-out';
+                document.body.appendChild(konfeti);
+
+                // Mulai jatuhkan
+                setTimeout(() => {
+                    konfeti.style.top = '120vh';
+                    konfeti.style.left = (Math.random() * 100) + 'vw';
+                }, 100);
+            }
+        }
+    </script>
+
+</body>
+</html>
